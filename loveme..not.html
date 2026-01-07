@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>She Loves Me, She Loves Me Not</title>
+    <style>
+        :root {
+            --bg-color: #fffdf5;
+            --text-color: #4a4a4a;
+            --accent-color: #ff85a1;
+            --petal-color: #ffffff;
+            --petal-stroke: #ffe0e9;
+            --center-color: #fef3b0;
+            --center-stroke: #f1e28c;
+            --pink-shadow: rgba(255, 133, 161, 0.2);
+            --vibrant-pink: #ff4d6d;
+            --grey-text: #999;
+            --dark-grey-text: #777;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 1. Flower Container */
+        .flower-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 0 auto;
+            touch-action: none;
+        }
+
+        #flower-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 12px 25px var(--pink-shadow));
+        }
+
+        /* 2. Hint below flower */
+        .hint {
+            font-size: 0.85rem;
+            color: #bbb;
+            font-style: italic;
+            margin: 10px 0 20px 0;
+            height: 1.2rem;
+            transition: opacity 0.3s ease;
+            letter-spacing: 0.02em;
+        }
+
+        /* 3. Status Text */
+        #status-text {
+            font-size: 2.2rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            color: var(--accent-color);
+            text-shadow: 1px 1px 0px rgba(255,255,255,1);
+            margin-bottom: 25px;
+            min-height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 4. Pronoun Selector */
+        .pronoun-selector {
+            display: flex;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 4px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            gap: 4px;
+            transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s;
+        }
+
+        .pronoun-selector.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .pronoun-btn {
+            padding: 6px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #888;
+            transition: all 0.3s ease;
+        }
+
+        .pronoun-btn.active {
+            background: white;
+            color: var(--accent-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 5. Reset Button */
+        .btn-reset {
+            padding: 12px 30px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 15px rgba(255, 133, 161, 0.3);
+        }
+
+        .btn-reset.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .btn-reset:hover {
+            background-color: #ff6b8e;
+            transform: scale(1.05);
+        }
+
+        .petal {
+            cursor: grab;
+            fill: var(--petal-color);
+            stroke: var(--petal-stroke);
+            stroke-width: 2;
+            transition: opacity 0.3s ease;
+        }
+
+        .petal:active {
+            cursor: grabbing;
+        }
+
+        .petal.plucked {
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease;
+        }
+
+        .flower-center {
+            fill: var(--center-color);
+            stroke: var(--center-stroke);
+            stroke-width: 2;
+            pointer-events: none;
+        }
+
+        .pop {
+            animation: textPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes textPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Flower at the top -->
+        <div class="flower-container" id="interaction-area">
+            <svg id="flower-svg" viewBox="0 0 200 200">
+                <g id="petals-group"></g>
+                <circle class="flower-center" cx="100" cy="100" r="20" />
+            </svg>
+        </div>
+
+        <!-- Hint below flower -->
+        <p class="hint" id="hint-text">Drag a petal away to pluck it</p>
+
+        <!-- Status text below hint -->
+        <div id="status-text">Pull a petal</div>
+
+        <!-- Pronoun Switcher below Status Text -->
+        <div class="pronoun-selector" id="pronoun-selector">
+            <button class="pronoun-btn active" onclick="setPronoun('He')">He</button>
+            <button class="pronoun-btn" onclick="setPronoun('She')">She</button>
+            <button class="pronoun-btn" onclick="setPronoun('They')">They</button>
+        </div>
+
+        <!-- Reset Button at the bottom -->
+        <button id="reset-btn" class="btn-reset">Try Again</button>
+    </div>
+
+    <script>
+        const petalsGroup = document.getElementById('petals-group');
+        const statusText = document.getElementById('status-text');
+        const resetBtn = document.getElementById('reset-btn');
+        const hintText = document.getElementById('hint-text');
+        const svg = document.getElementById('flower-svg');
+        const pronounBtns = document.querySelectorAll('.pronoun-btn');
+        const pronounSelector = document.getElementById('pronoun-selector');
+        
+        let petalsPulled = 0;
+        let totalPetals = 7; 
+        let currentPronoun = 'He';
+        let startWithLovesMe = false; 
+        let activePetal = null;
+        let startPos = { x: 0, y: 0 };
+        const PLUCK_THRESHOLD = 60; 
+
+        function setPronoun(p) {
+            currentPronoun = p;
+            pronounBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.innerText === p);
+            });
+            if (petalsPulled === 0) {
+                const verb = currentPronoun === 'They' ? 'love' : 'loves';
+                statusText.innerText = `${currentPronoun} ${verb} me?`;
+                statusText.style.color = "#ccc"; 
+            } else {
+                updateText();
+            }
+        }
+
+        function createPetals() {
+            startWithLovesMe = Math.random() < 0.5;
+            
+            petalsGroup.innerHTML = '';
+            petalsPulled = 0;
+            const verb = currentPronoun === 'They' ? 'love' : 'loves';
+            statusText.innerText = `${currentPronoun} ${verb} me?`;
+            statusText.style.color = "#ccc";
+            hintText.style.opacity = "1";
+            resetBtn.classList.remove('visible');
+            
+            // Show the pronoun selector again on reset
+            pronounSelector.classList.remove('hidden');
+
+            for (let i = 0; i < totalPetals; i++) {
+                const angle = (i / totalPetals) * 360;
+                const petal = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const d = `M100,100 C80,95 80,25 100,25 C120,25 120,95 100,100`;
+                
+                petal.setAttribute("d", d);
+                petal.setAttribute("class", "petal");
+                petal.dataset.baseRotation = angle;
+                petal.setAttribute("transform", `rotate(${angle}, 100, 100)`);
+                
+                petal.addEventListener('mousedown', startDrag);
+                petal.addEventListener('touchstart', startDrag, { passive: false });
+                
+                petalsGroup.appendChild(petal);
+            }
+        }
+
+        function getMousePos(evt) {
+            const CTM = svg.getScreenCTM();
+            if (evt.touches) { evt = evt.touches[0]; }
+            return {
+                x: (evt.clientX - CTM.e) / CTM.a,
+                y: (evt.clientY - CTM.f) / CTM.d
+            };
+        }
+
+        function startDrag(evt) {
+            if (evt.target.classList.contains('plucked')) return;
+            evt.preventDefault();
+            
+            activePetal = evt.target;
+            const pos = getMousePos(evt);
+            startPos = pos;
+
+            window.addEventListener('mousemove', drag);
+            window.addEventListener('touchmove', drag, { passive: false });
+            window.addEventListener('mouseup', endDrag);
+            window.addEventListener('touchend', endDrag);
+        }
+
+        function drag(evt) {
+            if (!activePetal) return;
+            evt.preventDefault();
+
+            const pos = getMousePos(evt);
+            const dx = pos.x - startPos.x;
+            const dy = pos.y - startPos.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            const rotation = activePetal.dataset.baseRotation;
+            activePetal.setAttribute("transform", `translate(${dx}, ${dy}) rotate(${rotation}, 100, 100)`);
+
+            if (dist > PLUCK_THRESHOLD) {
+                pluckPetal(activePetal, dx, dy);
+                endDrag();
+            }
+        }
+
+        function endDrag() {
+            if (activePetal && !activePetal.classList.contains('plucked')) {
+                const rotation = activePetal.dataset.baseRotation;
+                activePetal.style.transition = "transform 0.3s ease-out";
+                activePetal.setAttribute("transform", `rotate(${rotation}, 100, 100)`);
+                setTimeout(() => {
+                    if (activePetal) activePetal.style.transition = "";
+                }, 300);
+            }
+
+            activePetal = null;
+            window.removeEventListener('mousemove', drag);
+            window.removeEventListener('touchmove', drag);
+            window.removeEventListener('mouseup', endDrag);
+            window.removeEventListener('touchend', endDrag);
+        }
+
+        function pluckPetal(petal, dx, dy) {
+            petal.classList.add('plucked');
+            petalsPulled++;
+            
+            // Hide the pronoun selector on the very first pluck
+            if (petalsPulled === 1) {
+                pronounSelector.classList.add('hidden');
+            }
+            
+            const throwX = dx * 5;
+            const throwY = dy * 5;
+            const rotation = parseFloat(petal.dataset.baseRotation);
+            petal.setAttribute("transform", `translate(${throwX}, ${throwY}) rotate(${rotation + 45}, 100, 100)`);
+
+            updateText();
+
+            if (petalsPulled === totalPetals) {
+                setTimeout(() => {
+                    resetBtn.classList.add('visible');
+                    hintText.style.opacity = "0";
+                }, 500);
+            }
+        }
+
+        function updateText() {
+            const isLovesMe = (petalsPulled % 2 !== 0) === startWithLovesMe;
+            const verb = currentPronoun === 'They' ? 'love' : 'loves';
+            
+            statusText.classList.remove('pop');
+            void statusText.offsetWidth; 
+            statusText.classList.add('pop');
+
+            if (isLovesMe) {
+                statusText.innerText = `${currentPronoun} ${verb} me`;
+                statusText.style.color = "var(--vibrant-pink)";
+            } else {
+                statusText.innerText = `${currentPronoun} ${verb} me not`;
+                statusText.style.color = "var(--grey-text)";
+            }
+
+            if (petalsPulled === totalPetals) {
+                if (isLovesMe) {
+                    statusText.innerText = `${currentPronoun} ${verb} you ! `;
+                    statusText.style.color = "var(--vibrant-pink)";
+                } else {
+                    statusText.innerText = `${currentPronoun} ${verb} you... not `;
+                    statusText.style.color = "var(--dark-grey-text)";
+                }
+            }
+        }
+
+        resetBtn.addEventListener('click', createPetals);
+        window.onload = createPetals;
+    </script>
+</body>
+</html>
